@@ -4,9 +4,29 @@ import os
 from urllib.request import urlretrieve
 import time
 import sys
+import json
+
+non_bmp_map = dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd)
+
+
+def login_insta():
+    uname="jaycrappe"
+    pwd="Jmd2143815*****"
+    driver.find_element_by_name("username").send_keys(uname)
+    driver.find_element_by_name("password").send_keys(pwd)
+    driver.find_element_by_css_selector("button[type='submit']").click()
+
+def login_fb():
+    uname="jatin.madan39@gmail.com"
+    pwd="Jmd300555*****"
+    driver.find_element_by_class_name("KPnG0").click()
+    driver.find_element_by_name("email").send_keys(uname)
+    driver.find_element_by_name("pass").send_keys(pwd)
+    driver.find_element_by_css_selector("button[type='submit']").click()
+
 
 user = str(input('Enter the Username : '))
-url = "https://www.instagram.com/" + user
+url = "https://www.instagram.com/accounts/login"
 print(url)
 
 try:
@@ -18,17 +38,49 @@ try:
 except:
     print("ChromeDriver Error");
 
+
+login_insta()
+
+curr_url=url
+while(curr_url != "https://www.instagram.com/"):
+    print("Still Loading")
+    curr_url=driver.execute_script("return document.URL")
+driver.find_element_by_xpath("/html/body/div[3]/div/div/div[3]/button[2]").click()
+
+
+url = "https://www.instagram.com/" + user
+driver.get(url)
+
+
+
+def followers_list():
+    follows=driver.find_element_by_class_name("_5f5mN")
+    if(follows.text=="Follow"):
+        print("You do not follow this user")
+        ch=str(input("Should i follow this account ? (Y/N) : "))
+        if(ch=='y' or ch=='Y'):
+            follows.click()
+    x=driver.find_element_by_xpath("//*[@id=\"react-root\"]/section/main/div/header/section/ul/li[2]/a/span")
+    x.click()
+    foll_list=driver.find_elements_by_class_name("wo9IH")
+    for i in foll_list:
+        print(i.text.split()[0])
+
+
 try:
     photo_total = int(driver.find_element_by_class_name("g47SY").text.replace(".", "").replace(",", ""))
     username = driver.execute_script(
         "return document.title.split(\"(\")[0].substr(0,document.title.split(\"(\")[0].length-1)")
-    tag = driver.execute_script(
-        "return document.title.split(\"(\")[1].split(\")\")[0].substr(0,document.title.split(\"(\")[1].length-1)")
+    taghandle = driver.execute_script(
+        "return document.title.split(\"(\")[1].split(\")\")[0]")
+    followers=driver.find_element_by_xpath("//*[@id=\"react-root\"]/section/main/div/header/section/ul/li[2]/a/span").get_attribute("title")
+    print("Number of Followers : ",followers)
     print("Total number of posts : ", photo_total)
     print("Selected User : ", username)
+    print("Insta Handle : ",taghandle)
 except:
     print("Post Value Error")
-
+    
 imgLinks = []
 
 try:
@@ -54,28 +106,31 @@ except:
     print("Post Link Error")
 
 pic_user_path = "C:\\Users\\jatin\\Desktop\\Stark\\Python\\" + username
+
 try:
     os.mkdir(pic_user_path)
 except:
     print("Directory for the user exists already")
 captions = {}
+posts={}
+posts["User"]=username.translate(non_bmp_map)
+posts["Handle"]="@"+user
 for i in imgLinks:
-    driver.get(i)
-
+    post={}
+    try:
+        driver.get(i)
+    except:
+        print("Cant Load Post")
+        
     # COMMENTS
-    """
-    while 1 == 1:
-        print("Trying to get rid of annoying banner")
-        if driver.find_element_by_xpath('//*[@id="react-root"]/section/nav/div[2]/div/div/div[3]/div/div/div/button'):
-            driver.find_element_by_xpath('//*[@id="react-root"]/section/nav/div[2]/div/div/div[3]/div/div/div/button').click()
-            break
-    """    
     hasLoadMore = True
     while hasLoadMore:
         time.sleep(1)
         try:
-            if driver.find_element_by_css_selector('#react-root > section > main > div > div > article > div.eo2As > div.KlCQn.EtaWk > ul > li.lnrre > button'):
-                driver.find_element_by_css_selector('#react-root > section > main > div > div > article > div.eo2As > div.KlCQn.EtaWk > ul > li.lnrre > button').click()
+            if driver.find_element_by_css_selector(
+                    '#react-root > section > main > div > div > article > div.eo2As > div.KlCQn.EtaWk > ul > li.lnrre > button'):
+                driver.find_element_by_css_selector(
+                    '#react-root > section > main > div > div > article > div.eo2As > div.KlCQn.EtaWk > ul > li.lnrre > button').click()
         except:
             hasLoadMore = False
             print("No more comments to load")
@@ -97,14 +152,14 @@ for i in imgLinks:
             comments_count = len(users_list)
     except:
         print("Failed to load comments")
-            
-    non_bmp_map = dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd)
+
+    
     try:
         for i in range(1, comments_count):
-            user = users_list[i]
-            text = texts_list[i]
-            print("User ", user.translate(non_bmp_map))
-            print("Text ", text.translate(non_bmp_map))
+            user = users_list[i].translate(non_bmp_map)
+            text = texts_list[i].translate(non_bmp_map)
+            print("User ", user)
+            print("Text ", text)
             idxs = [m.start() for m in re.finditer('@', text)]
             for idx in idxs:
                 handle = text[idx:].split(" ")[0]
@@ -166,8 +221,34 @@ for i in imgLinks:
             # break
     try:
         captions[i] = driver.execute_script(
-            "return window._sharedData.entry_data.PostPage[0].graphql.shortcode_media.edge_media_to_caption.edges[0].node.text")
+            "return window._sharedData.entry_data.PostPage[0].graphql.shortcode_media.edge_media_to_caption.edges[0].node.text").translate(non_bmp_map)
     except:
         captions[i] = "No Caption"
+    try:
+        try:
+            post["Link"]=i.translate(non_bmp_map)
+        except:
+            print("LINK IN JSON ERROR")
+        try:
+            post["Image Name"]=path.translate(non_bmp_map)
+        except:
+            print("IMAGE NAME IN JSON ERROR")
+        try:
+            post["Caption"]=captions[i].translate(non_bmp_map)
+        except:
+            print("CAPTION IN JSON ERROR")
+        try:
+            if(users_list and texts_list):
+                post["Comments"]=list(zip(users_list,texts_list))
+                posts[name]=post
+            else:
+                post["Comments"]=[]
+        except:
+            print("COMMENTS IN JSON ERROR")
+    except:
+        print("Creating Dictionary Error")
+        
+filename=username+".json"
 
-print(captions)
+with open(filename, "w") as write_file:
+    json.dump(posts, write_file,indent=4)
