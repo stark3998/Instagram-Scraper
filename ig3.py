@@ -10,15 +10,11 @@ non_bmp_map = dict.fromkeys(range(0x10000, sys.maxunicode + 1), 0xfffd)
 
 
 def login_insta():
-    uname="jaycrappe"
-    pwd="Jmd2143815*****"
     driver.find_element_by_name("username").send_keys(uname)
     driver.find_element_by_name("password").send_keys(pwd)
     driver.find_element_by_css_selector("button[type='submit']").click()
 
 def login_fb():
-    uname="jatin.madan39@gmail.com"
-    pwd="Jmd300555*****"
     driver.find_element_by_class_name("KPnG0").click()
     driver.find_element_by_name("email").send_keys(uname)
     driver.find_element_by_name("pass").send_keys(pwd)
